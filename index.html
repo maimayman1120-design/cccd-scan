@@ -1,47 +1,77 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Máy Quét CCCD Nhanh</title>
+    <title>Máy Quét CCCD Tự Động</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
-        body { font-family: sans-serif; text-align: center; padding: 20px; }
-        #reader { width: 100%; max-width: 500px; margin: auto; }
-        .status { color: green; font-weight: bold; margin-top: 20px; }
+        body { font-family: Arial, sans-serif; text-align: center; padding: 15px; background-color: #f4f4f9; }
+        h2 { color: #333; }
+        #reader { width: 100%; max-width: 400px; margin: 0 auto; background: white; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); padding: 10px;}
+        #result-box { margin-top: 20px; padding: 15px; border-radius: 8px; background-color: #fff; box-shadow: 0 4px 8px rgba(0,0,0,0.1); display: none; }
+        .success-text { color: #28a745; font-size: 18px; font-weight: bold; margin-bottom: 10px;}
+        .info-text { font-size: 16px; color: #555; margin-bottom: 15px; }
+        .btn-go { display: inline-block; padding: 12px 24px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 16px; }
     </style>
 </head>
 <body>
-    <h2>Quét mã QR CCCD</h2>
+    <h2>Quét Mã CCCD</h2>
     <div id="reader"></div>
-    <div id="result" class="status">Đang đợi quét...</div>
+    <div id="result-box">
+        <div class="success-text">✅ Đã quét thành công!</div>
+        <div class="info-text" id="info-display"></div>
+        <p style="font-size: 14px; color: #888;">Tự động chuyển Google Form sau 2 giây...</p>
+        <a href="#" id="manual-btn" class="btn-go">Bấm vào đây nếu máy không tự chuyển</a>
+    </div>
 
     <script>
-        // --- THAY LINK FORM CỦA BẠN VÀ MÃ ENTRY VÀO ĐÂY ---
-        const FORM_URL = "https://docs.google.com/forms/d/e/1zqrTFdWAjRU8KtDSK9l6b0jkGH58PA19_1eeEMx2zCY/viewform";
+        // BƯỚC QUAN TRỌNG: BẠN PHẢI THAY FORM_URL BẰNG LINK CHUẨN (BẮT ĐẦU BẰNG 1FAIpQL...)
+        const FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSfRVneQJMf8TXq0U4aCOgodTxRNiCZk5wnCNjZuuDWBveiMXA/viewform"; 
+        
         const ENTRY_ID = "1065046570";     // Mã Số CCCD
         const ENTRY_TEN = "2005620554";   // Mã Họ Tên
         const ENTRY_NGAY = "1045781291";   // Mã Ngày Sinh
 
-        function onScanSuccess(decodedText) {
-            document.getElementById('result').innerText = "Đã tìm thấy! Đang chuyển hướng...";
-            
-            // Tách chuỗi CCCD: Số|CMND cũ|Tên|NgàySinh|...
-            const parts = decodedText.split('|');
-            const id = parts[0];
-            const ten = encodeURIComponent(parts[2]);
-            
-            // Xử lý ngày sinh từ DDMMYYYY sang YYYY-MM-DD cho Google Form
-            const rawDate = parts[3];
-            const formattedDate = `${rawDate.substring(4, 8)}-${rawDate.substring(2, 4)}-${rawDate.substring(0, 2)}`;
+        let html5QrcodeScanner;
 
-            // Tạo link Pre-filled
-            const finalUrl = `${FORM_URL}?entry.${ENTRY_ID}=${id}&entry.${ENTRY_TEN}=${ten}&entry.${ENTRY_NGAY}=${formattedDate}`;
-            
-            // Chuyển hướng
-            window.location.href = finalUrl;
+        function onScanSuccess(decodedText) {
+            // 1. Quét xong thì dừng camera lại ngay để không bị quét đúp
+            html5QrcodeScanner.clear();
+
+            try {
+                // 2. Tách dữ liệu
+                const parts = decodedText.split('|');
+                const id = parts[0];
+                const ten = encodeURIComponent(parts[2]);
+                const tenHienThi = parts[2]; 
+                const rawDate = parts[3];
+                const formattedDate = `${rawDate.substring(4, 8)}-${rawDate.substring(2, 4)}-${rawDate.substring(0, 2)}`;
+
+                // 3. Tạo Link Google Form
+                const finalUrl = `${FORM_URL}?entry.${ENTRY_ID}=${id}&entry.${ENTRY_TEN}=${ten}&entry.${ENTRY_NGAY}=${formattedDate}`;
+
+                // 4. Hiển thị thông tin lên màn hình cho người dùng yên tâm
+                document.getElementById('result-box').style.display = 'block';
+                document.getElementById('info-display').innerHTML = `<b>${tenHienThi}</b><br>CCCD: ${id}`;
+                document.getElementById('manual-btn').href = finalUrl;
+
+                // 5. Đợi 2 giây rồi tự động mở Google Form
+                setTimeout(() => {
+                    window.location.href = finalUrl;
+                }, 2000);
+
+            } catch (error) {
+                alert("Mã QR không hợp lệ hoặc không phải thẻ CCCD!");
+            }
         }
 
-        let html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
+        // Tối ưu cài đặt Camera để quét nhạy hơn
+        const config = { 
+            fps: 15, 
+            qrbox: { width: 250, height: 250 },
+            formatsToSupport: [ Html5QrcodeSupportedFormats.QR_CODE ] // Bắt buộc chỉ tìm QR code để máy tính nhanh hơn
+        };
+        html5QrcodeScanner = new Html5QrcodeScanner("reader", config, false);
         html5QrcodeScanner.render(onScanSuccess);
     </script>
 </body>
