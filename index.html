@@ -25,54 +25,52 @@
     </div>
 
     <script>
-        // BƯỚC QUAN TRỌNG: BẠN PHẢI THAY FORM_URL BẰNG LINK CHUẨN (BẮT ĐẦU BẰNG 1FAIpQL...)
-        const FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSfRVneQJMf8TXq0U4aCOgodTxRNiCZk5wnCNjZuuDWBveiMXA/viewform"; 
-        
-        const ENTRY_ID = "1065046570";     // Mã Số CCCD
-        const ENTRY_TEN = "2005620554";   // Mã Họ Tên
-        const ENTRY_NGAY = "1045781291";   // Mã Ngày Sinh
+    const FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSfRVneQJMf8TXq0U4aCOgodTxRNiCZk5wnCNjZuuDWBveiMXA/viewform"; 
+    const ENTRY_ID = "1065046570";
+    const ENTRY_TEN = "2005620554";
+    const ENTRY_NGAY = "1045781291";
 
-        let html5QrcodeScanner;
+    let html5QrcodeScanner;
 
-        function onScanSuccess(decodedText) {
-            // 1. Quét xong thì dừng camera lại ngay để không bị quét đúp
-            html5QrcodeScanner.clear();
+    function onScanSuccess(decodedText) {
+        html5QrcodeScanner.clear();
+        try {
+            const parts = decodedText.split('|');
+            const id = parts[0];
+            const ten = encodeURIComponent(parts[2]);
+            const tenHienThi = parts[2]; 
+            const rawDate = parts[3];
+            const formattedDate = `${rawDate.substring(4, 8)}-${rawDate.substring(2, 4)}-${rawDate.substring(0, 2)}`;
 
-            try {
-                // 2. Tách dữ liệu
-                const parts = decodedText.split('|');
-                const id = parts[0];
-                const ten = encodeURIComponent(parts[2]);
-                const tenHienThi = parts[2]; 
-                const rawDate = parts[3];
-                const formattedDate = `${rawDate.substring(4, 8)}-${rawDate.substring(2, 4)}-${rawDate.substring(0, 2)}`;
+            const finalUrl = `${FORM_URL}?entry.${ENTRY_ID}=${id}&entry.${ENTRY_TEN}=${ten}&entry.${ENTRY_NGAY}=${formattedDate}`;
 
-                // 3. Tạo Link Google Form
-                const finalUrl = `${FORM_URL}?entry.${ENTRY_ID}=${id}&entry.${ENTRY_TEN}=${ten}&entry.${ENTRY_NGAY}=${formattedDate}`;
+            document.getElementById('result-box').style.display = 'block';
+            document.getElementById('info-display').innerHTML = `<b>${tenHienThi}</b><br>CCCD: ${id}`;
+            document.getElementById('manual-btn').href = finalUrl;
 
-                // 4. Hiển thị thông tin lên màn hình cho người dùng yên tâm
-                document.getElementById('result-box').style.display = 'block';
-                document.getElementById('info-display').innerHTML = `<b>${tenHienThi}</b><br>CCCD: ${id}`;
-                document.getElementById('manual-btn').href = finalUrl;
-
-                // 5. Đợi 2 giây rồi tự động mở Google Form
-                setTimeout(() => {
-                    window.location.href = finalUrl;
-                }, 2000);
-
-            } catch (error) {
-                alert("Mã QR không hợp lệ hoặc không phải thẻ CCCD!");
-            }
+            setTimeout(() => { window.location.href = finalUrl; }, 1500);
+        } catch (error) {
+            alert("Mã QR không đúng cấu trúc CCCD!");
+            location.reload(); // Tải lại để quét tiếp nếu lỗi
         }
+    }
 
-        // Tối ưu cài đặt Camera để quét nhạy hơn
-        const config = { 
-            fps: 15, 
-            qrbox: { width: 250, height: 250 },
-            formatsToSupport: [ Html5QrcodeSupportedFormats.QR_CODE ] // Bắt buộc chỉ tìm QR code để máy tính nhanh hơn
-        };
-        html5QrcodeScanner = new Html5QrcodeScanner("reader", config, false);
-        html5QrcodeScanner.render(onScanSuccess);
-    </script>
-</body>
-</html>
+    // CẤU HÌNH MỚI TỐI ƯU CHO IPHONE/SAFARI
+    const config = { 
+        fps: 20, // Tăng khung hình để bắt mã nhanh hơn
+        qrbox: function(viewfinderWidth, viewfinderHeight) {
+            // Tự động điều chỉnh khung quét chiếm 70% màn hình điện thoại
+            let minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+            let fontSize = Math.floor(minEdge * 0.7);
+            return { width: fontSize, height: fontSize };
+        },
+        aspectRatio: 1.0,
+        videoConstraints: {
+            facingMode: "environment", // Ép dùng camera sau
+            focusMode: "continuous"    // Ép lấy nét liên tục
+        }
+    };
+
+    html5QrcodeScanner = new Html5QrcodeScanner("reader", config, false);
+    html5QrcodeScanner.render(onScanSuccess);
+</script>
