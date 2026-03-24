@@ -20,57 +20,49 @@
     <div id="result-box">
         <div class="success-text">✅ Đã quét thành công!</div>
         <div class="info-text" id="info-display"></div>
-        <p style="font-size: 14px; color: #888;">Tự động chuyển Google Form sau 2 giây...</p>
+        <p style="font-size: 14px; color: #888;">Tự động chuyển Form sau 2 giây...</p>
         <a href="#" id="manual-btn" class="btn-go">Bấm vào đây nếu máy không tự chuyển</a>
     </div>
 
     <script>
-    const FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSfRVneQJMf8TXq0U4aCOgodTxRNiCZk5wnCNjZuuDWBveiMXA/viewform"; 
-    const ENTRY_ID = "1065046570";
-    const ENTRY_TEN = "2005620554";
-    const ENTRY_NGAY = "1045781291";
+        const FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSfRVneQJMf8TXq0U4aCOgodTxRNiCZk5wnCNjZuuDWBveiMXA/viewform"; 
+        const ENTRY_ID = "1065046570";
+        const ENTRY_TEN = "2005620554";
+        const ENTRY_NGAY = "1045781291";
 
-    let html5QrcodeScanner;
+        let html5QrcodeScanner;
 
-    function onScanSuccess(decodedText) {
-        html5QrcodeScanner.clear();
-        try {
-            const parts = decodedText.split('|');
-            const id = parts[0];
-            const ten = encodeURIComponent(parts[2]);
-            const tenHienThi = parts[2]; 
-            const rawDate = parts[3];
-            const formattedDate = `${rawDate.substring(4, 8)}-${rawDate.substring(2, 4)}-${rawDate.substring(0, 2)}`;
+        function onScanSuccess(decodedText) {
+            html5QrcodeScanner.clear();
+            try {
+                const parts = decodedText.split('|');
+                const id = parts[0];
+                const ten = encodeURIComponent(parts[2]);
+                const tenHienThi = parts[2]; 
+                const rawDate = parts[3];
+                const formattedDate = `${rawDate.substring(4, 8)}-${rawDate.substring(2, 4)}-${rawDate.substring(0, 2)}`;
 
-            const finalUrl = `${FORM_URL}?entry.${ENTRY_ID}=${id}&entry.${ENTRY_TEN}=${ten}&entry.${ENTRY_NGAY}=${formattedDate}`;
+                const finalUrl = `${FORM_URL}?entry.${ENTRY_ID}=${id}&entry.${ENTRY_TEN}=${ten}&entry.${ENTRY_NGAY}=${formattedDate}`;
 
-            document.getElementById('result-box').style.display = 'block';
-            document.getElementById('info-display').innerHTML = `<b>${tenHienThi}</b><br>CCCD: ${id}`;
-            document.getElementById('manual-btn').href = finalUrl;
+                document.getElementById('result-box').style.display = 'block';
+                document.getElementById('info-display').innerHTML = `<b>${tenHienThi}</b><br>CCCD: ${id}`;
+                document.getElementById('manual-btn').href = finalUrl;
 
-            setTimeout(() => { window.location.href = finalUrl; }, 1500);
-        } catch (error) {
-            alert("Mã QR không đúng cấu trúc CCCD!");
-            location.reload(); // Tải lại để quét tiếp nếu lỗi
+                setTimeout(() => { window.location.href = finalUrl; }, 1500);
+            } catch (error) {
+                alert("Mã QR không đúng cấu trúc CCCD!");
+                location.reload(); 
+            }
         }
-    }
 
-    // CẤU HÌNH MỚI TỐI ƯU CHO IPHONE/SAFARI
-    const config = { 
-        fps: 20, // Tăng khung hình để bắt mã nhanh hơn
-        qrbox: function(viewfinderWidth, viewfinderHeight) {
-            // Tự động điều chỉnh khung quét chiếm 70% màn hình điện thoại
-            let minEdge = Math.min(viewfinderWidth, viewfinderHeight);
-            let fontSize = Math.floor(minEdge * 0.7);
-            return { width: fontSize, height: fontSize };
-        },
-        aspectRatio: 1.0,
-        videoConstraints: {
-            facingMode: "environment", // Ép dùng camera sau
-            focusMode: "continuous"    // Ép lấy nét liên tục
-        }
-    };
+        // CẤU HÌNH AN TOÀN - CHẠY ĐƯỢC TRÊN MỌI THIẾT BỊ
+        const config = { 
+            fps: 15, 
+            qrbox: { width: 250, height: 250 }
+        };
 
-    html5QrcodeScanner = new Html5QrcodeScanner("reader", config, false);
-    html5QrcodeScanner.render(onScanSuccess);
-</script>
+        html5QrcodeScanner = new Html5QrcodeScanner("reader", config, false);
+        html5QrcodeScanner.render(onScanSuccess);
+    </script>
+</body>
+</html>
