@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Máy Quét CCCD Nhanh</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <style>
+        body { font-family: sans-serif; text-align: center; padding: 20px; }
+        #reader { width: 100%; max-width: 500px; margin: auto; }
+        .status { color: green; font-weight: bold; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h2>Quét mã QR CCCD</h2>
+    <div id="reader"></div>
+    <div id="result" class="status">Đang đợi quét...</div>
+
+    <script>
+        // --- THAY LINK FORM CỦA BẠN VÀ MÃ ENTRY VÀO ĐÂY ---
+        const FORM_URL = "https://docs.google.com/forms/d/e/XXXXX/viewform";
+        const ENTRY_ID = "639935761";     // Mã Số CCCD
+        const ENTRY_TEN = "1719453104";   // Mã Họ Tên
+        const ENTRY_NGAY = "945974927";   // Mã Ngày Sinh
+
+        function onScanSuccess(decodedText) {
+            document.getElementById('result').innerText = "Đã tìm thấy! Đang chuyển hướng...";
+            
+            // Tách chuỗi CCCD: Số|CMND cũ|Tên|NgàySinh|...
+            const parts = decodedText.split('|');
+            const id = parts[0];
+            const ten = encodeURIComponent(parts[2]);
+            
+            // Xử lý ngày sinh từ DDMMYYYY sang YYYY-MM-DD cho Google Form
+            const rawDate = parts[3];
+            const formattedDate = `${rawDate.substring(4, 8)}-${rawDate.substring(2, 4)}-${rawDate.substring(0, 2)}`;
+
+            // Tạo link Pre-filled
+            const finalUrl = `${FORM_URL}?entry.${ENTRY_ID}=${id}&entry.${ENTRY_TEN}=${ten}&entry.${ENTRY_NGAY}=${formattedDate}`;
+            
+            // Chuyển hướng
+            window.location.href = finalUrl;
+        }
+
+        let html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
+        html5QrcodeScanner.render(onScanSuccess);
+    </script>
+</body>
+</html>
