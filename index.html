@@ -7,7 +7,7 @@
     <style>
         body { font-family: Arial, sans-serif; text-align: center; padding: 15px; background-color: #f4f4f9; }
         h2 { color: #333; }
-        #reader { width: 100%; max-width: 400px; margin: 0 auto; background: white; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); padding: 10px;}
+        #reader { width: 100%; max-width: 500px; margin: 0 auto; background: white; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); padding: 10px;}
         #result-box { margin-top: 20px; padding: 15px; border-radius: 8px; background-color: #fff; box-shadow: 0 4px 8px rgba(0,0,0,0.1); display: none; }
         .success-text { color: #28a745; font-size: 18px; font-weight: bold; margin-bottom: 10px;}
         .info-text { font-size: 16px; color: #555; margin-bottom: 15px; }
@@ -36,6 +36,8 @@
             html5QrcodeScanner.clear();
             try {
                 const parts = decodedText.split('|');
+                if(parts.length < 4) throw new Error("Thiếu dữ liệu");
+
                 const id = parts[0];
                 const ten = encodeURIComponent(parts[2]);
                 const tenHienThi = parts[2]; 
@@ -50,15 +52,18 @@
 
                 setTimeout(() => { window.location.href = finalUrl; }, 1500);
             } catch (error) {
-                alert("Mã QR không đúng cấu trúc CCCD!");
+                alert("Mã QR không hợp lệ. Vui lòng thử lại!");
                 location.reload(); 
             }
         }
 
-        // CẤU HÌNH AN TOÀN - CHẠY ĐƯỢC TRÊN MỌI THIẾT BỊ
+        // CẤU HÌNH TỐI ƯU MỚI: BỎ KHUNG VUÔNG, QUÉT TOÀN MÀN HÌNH
         const config = { 
-            fps: 15, 
-            qrbox: { width: 250, height: 250 }
+            fps: 10, 
+            formatsToSupport: [ Html5QrcodeSupportedFormats.QR_CODE ], // Chỉ quét QR
+            experimentalFeatures: {
+                useBarCodeDetectorIfSupported: true // Kích hoạt lõi AI của điện thoại
+            }
         };
 
         html5QrcodeScanner = new Html5QrcodeScanner("reader", config, false);
