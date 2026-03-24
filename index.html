@@ -1,28 +1,47 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Máy Quét CCCD Tự Động</title>
+    <title>Hệ Thống Quét CCCD</title>
+    <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
-        body { font-family: Arial, sans-serif; text-align: center; padding: 15px; background-color: #f4f4f9; }
-        h2 { color: #333; }
-        #reader { width: 100%; max-width: 500px; margin: 0 auto; background: white; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); padding: 10px;}
-        #result-box { margin-top: 20px; padding: 15px; border-radius: 8px; background-color: #fff; box-shadow: 0 4px 8px rgba(0,0,0,0.1); display: none; }
-        .success-text { color: #28a745; font-size: 18px; font-weight: bold; margin-bottom: 10px;}
-        .info-text { font-size: 16px; color: #555; margin-bottom: 15px; }
-        .btn-go { display: inline-block; padding: 12px 24px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 16px; }
+        body { font-family: Arial, sans-serif; text-align: center; padding: 20px; background-color: #f0f2f5; }
+        .container { background: white; padding: 30px 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); max-width: 400px; margin: 0 auto; }
+        h2 { color: #1a73e8; margin-bottom: 20px; font-size: 24px; }
+        
+        /* Nút chụp ảnh khổng lồ */
+        .btn-capture { 
+            display: block; width: 100%; padding: 20px; background-color: #1a73e8; 
+            color: white; font-size: 18px; font-weight: bold; border: none; 
+            border-radius: 8px; cursor: pointer; text-decoration: none; box-sizing: border-box;
+        }
+        .btn-capture:active { background-color: #1557b0; }
+        
+        /* Ẩn thẻ input thật đi */
+        input[type="file"] { display: none; }
+        
+        #status { margin-top: 20px; font-size: 16px; font-weight: bold; padding: 10px; border-radius: 8px; }
+        .status-loading { color: #856404; background-color: #fff3cd; }
+        .status-success { color: #155724; background-color: #d4edda; }
+        .status-error { color: #721c24; background-color: #f8d7da; }
     </style>
 </head>
 <body>
-    <h2>Quét Mã CCCD</h2>
-    <div id="reader"></div>
-    <div id="result-box">
-        <div class="success-text">✅ Đã quét thành công!</div>
-        <div class="info-text" id="info-display"></div>
-        <p style="font-size: 14px; color: #888;">Tự động chuyển Form sau 2 giây...</p>
-        <a href="#" id="manual-btn" class="btn-go">Bấm vào đây nếu máy không tự chuyển</a>
+
+    <div class="container">
+        <h2>Quét CCCD Tự Động</h2>
+        <p style="color: #666; margin-bottom: 25px;">Nhấn nút bên dưới, hướng camera vào mã QR trên thẻ và ấn chụp.</p>
+        
+        <label for="qr-input" class="btn-capture">
+            📸 NHẤN ĐỂ CHỤP CCCD
+        </label>
+        <input type="file" id="qr-input" accept="image/*" capture="environment">
+
+        <div id="status"></div>
     </div>
+
+    <div id="reader" style="display: none;"></div>
 
     <script>
         const FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSfRVneQJMf8TXq0U4aCOgodTxRNiCZk5wnCNjZuuDWBveiMXA/viewform"; 
@@ -30,44 +49,48 @@
         const ENTRY_TEN = "2005620554";
         const ENTRY_NGAY = "1045781291";
 
-        let html5QrcodeScanner;
+        const fileInput = document.getElementById('qr-input');
+        const statusDiv = document.getElementById('status');
+        
+        // Khởi tạo thư viện quét ẩn
+        const html5QrCode = new Html5Qrcode("reader");
 
-        function onScanSuccess(decodedText) {
-            html5QrcodeScanner.clear();
-            try {
+        // Khi người dùng chụp ảnh xong
+        fileInput.addEventListener('change', e => {
+            if (e.target.files.length == 0) return;
+            const imageFile = e.target.files[0];
+            
+            statusDiv.className = "status-loading";
+            statusDiv.innerHTML = "⏳ Đang phân tích ảnh. Vui lòng đợi...";
+
+            // Đọc ảnh và giải mã
+            html5QrCode.scanFile(imageFile, true)
+            .then(decodedText => {
                 const parts = decodedText.split('|');
-                if(parts.length < 4) throw new Error("Thiếu dữ liệu");
+                if(parts.length < 4) throw new Error("Mã QR không đủ thông tin");
 
                 const id = parts[0];
                 const ten = encodeURIComponent(parts[2]);
-                const tenHienThi = parts[2]; 
+                const tenHienThi = parts[2];
                 const rawDate = parts[3];
                 const formattedDate = `${rawDate.substring(4, 8)}-${rawDate.substring(2, 4)}-${rawDate.substring(0, 2)}`;
 
                 const finalUrl = `${FORM_URL}?entry.${ENTRY_ID}=${id}&entry.${ENTRY_TEN}=${ten}&entry.${ENTRY_NGAY}=${formattedDate}`;
 
-                document.getElementById('result-box').style.display = 'block';
-                document.getElementById('info-display').innerHTML = `<b>${tenHienThi}</b><br>CCCD: ${id}`;
-                document.getElementById('manual-btn').href = finalUrl;
-
-                setTimeout(() => { window.location.href = finalUrl; }, 1500);
-            } catch (error) {
-                alert("Mã QR không hợp lệ. Vui lòng thử lại!");
-                location.reload(); 
-            }
-        }
-
-        // CẤU HÌNH TỐI ƯU MỚI: BỎ KHUNG VUÔNG, QUÉT TOÀN MÀN HÌNH
-        const config = { 
-            fps: 10, 
-            formatsToSupport: [ Html5QrcodeSupportedFormats.QR_CODE ], // Chỉ quét QR
-            experimentalFeatures: {
-                useBarCodeDetectorIfSupported: true // Kích hoạt lõi AI của điện thoại
-            }
-        };
-
-        html5QrcodeScanner = new Html5QrcodeScanner("reader", config, false);
-        html5QrcodeScanner.render(onScanSuccess);
+                statusDiv.className = "status-success";
+                statusDiv.innerHTML = `✅ Đã quét thành công:<br><b>${tenHienThi}</b><br>Đang chuyển sang Form...`;
+                
+                // Chuyển hướng
+                setTimeout(() => window.location.href = finalUrl, 1500);
+            })
+            .catch(err => {
+                statusDiv.className = "status-error";
+                statusDiv.innerHTML = "❌ Không tìm thấy mã QR! Hãy đảm bảo ảnh chụp RÕ NÉT, không bị lóa sáng.";
+                // Reset lại input để chụp lại
+                fileInput.value = ""; 
+            });
+        });
     </script>
+
 </body>
 </html>
