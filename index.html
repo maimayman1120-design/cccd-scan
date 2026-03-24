@@ -1,29 +1,28 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Máy Quét CCCD (Chế độ HD)</title>
+    <title>Máy Quét CCCD (Bản Ổn Định)</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
         body { font-family: Arial, sans-serif; text-align: center; margin: 0; padding: 20px; background: #111; color: white; }
         h2 { color: #00ffcc; margin-bottom: 5px; }
         p { color: #888; font-size: 14px; margin-top: 0; margin-bottom: 20px; }
-        /* Khung camera được thiết kế lại để bớt nhiễu */
-        #reader { width: 100%; max-width: 450px; margin: 0 auto; border: 3px solid #00ffcc; border-radius: 12px; overflow: hidden; background: #000; box-shadow: 0 0 15px rgba(0, 255, 204, 0.3); }
+        #reader { width: 100%; max-width: 450px; margin: 0 auto; border: 3px solid #00ffcc; border-radius: 12px; overflow: hidden; background: #222; box-shadow: 0 0 15px rgba(0, 255, 204, 0.3); min-height: 250px; position: relative; }
         #result-text { margin-top: 20px; font-size: 18px; font-weight: bold; color: #ffcc00; min-height: 50px; }
         .btn-restart { margin-top: 15px; padding: 12px 25px; background: #007bff; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; display: none; margin-left: auto; margin-right: auto;}
     </style>
 </head>
 <body>
 
-    <h2>Máy Quét CCCD Nét Cao</h2>
-    <p>Camera đang chạy ở độ phân giải Full HD</p>
+    <h2>Máy Quét CCCD Tự Động</h2>
+    <p>Hệ thống tự động tối ưu camera</p>
 
     <div id="reader"></div>
     
-    <div id="result-text">⏳ Đang tải Camera HD... Hãy cho phép truy cập Camera!</div>
+    <div id="result-text">⏳ Đang yêu cầu quyền Camera...</div>
     
-    <button id="btn-restart" class="btn-restart" onclick="startScanner()">Khởi động lại Camera</button>
+    <button id="btn-restart" class="btn-restart" onclick="location.reload()">🔄 Khởi động lại trang</button>
 
     <script>
         const FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSfRVneQJMf8TXq0U4aCOgodTxRNiCZk5wnCNjZuuDWBveiMXA/viewform"; 
@@ -33,35 +32,21 @@
 
         let html5QrCode;
 
-        function startScanner() {
-            document.getElementById('result-text').innerText = "Đang quét... Hãy đưa CCCD vào giữa màn hình.";
-            document.getElementById('btn-restart').style.display = "none";
-
-            // Nếu camera đang mở thì tắt đi để mở lại
-            if (html5QrCode) {
-                html5QrCode.stop().catch(err => console.log(err));
-            }
-
-            // Dùng hàm lõi của thư viện (Html5Qrcode thay vì Html5QrcodeScanner)
+        function startCamera() {
             html5QrCode = new Html5Qrcode("reader");
 
-            // ÉP CAMERA CHẠY Ở CHẾ ĐỘ FULL HD (1920x1080) ĐỂ NHÌN RÕ MÃ CCCD ĐẶC KỊT
-            const hdConstraints = {
-                video: {
-                    facingMode: "environment",  // Ép dùng camera sau
-                    width: { ideal: 1920 },     // Ép nét Full HD
-                    height: { ideal: 1080 }
-                }
-            };
+            // Cấu hình linh hoạt: Ưu tiên camera sau, không ép cứng độ phân giải để tránh treo máy
+            const cameraConfig = { facingMode: "environment" };
 
             html5QrCode.start(
-                hdConstraints,
+                cameraConfig,
                 {
-                    fps: 15, // Quét 15 khung hình/giây
-                    qrbox: { width: 250, height: 250 } // Vùng lấy nét
+                    fps: 15,
+                    qrbox: { width: 250, height: 250 },
+                    experimentalFeatures: { useBarCodeDetectorIfSupported: true } // Kích hoạt AI nếu máy có
                 },
-                (decodedText, decodedResult) => {
-                    // KHI QUÉT THÀNH CÔNG -> Dừng camera ngay lập tức
+                (decodedText) => {
+                    // Dừng camera ngay khi quét thành công
                     html5QrCode.stop(); 
                     
                     try {
@@ -76,25 +61,28 @@
 
                         const finalUrl = `${FORM_URL}?entry.${ENTRY_ID}=${id}&entry.${ENTRY_TEN}=${ten}&entry.${ENTRY_NGAY}=${formattedDate}`;
 
-                        document.getElementById('result-text').innerHTML = `✅ Quét thành công: <span style="color: #00ffcc;">${tenHienThi}</span><br>Đang mở Google Form...`;
+                        document.getElementById('result-text').innerHTML = `✅ Quét thành công: <span style="color: #00ffcc;">${tenHienThi}</span><br>Đang mở Form...`;
                         
                         setTimeout(() => window.location.href = finalUrl, 1000);
                     } catch (error) {
-                        document.getElementById('result-text').innerHTML = "❌ Mã không phải thẻ CCCD! Hãy quét lại.";
+                        document.getElementById('result-text').innerHTML = "❌ Mã không hợp lệ. Vui lòng tải lại trang.";
                         document.getElementById('btn-restart').style.display = "block";
                     }
                 },
                 (errorMessage) => {
-                    // Bỏ qua các cảnh báo không tìm thấy mã trong quá trình đang dò
+                    // Ẩn các lỗi quét dò tìm nền
                 }
-            ).catch((err) => {
-                document.getElementById('result-text').innerHTML = "❌ Lỗi: Không thể mở Camera chuẩn HD. Hãy thử tải lại trang.";
+            ).then(() => {
+                // Chỉ hiện chữ "Đang quét" KHI CAMERA ĐÃ THỰC SỰ MỞ LÊN
+                document.getElementById('result-text').innerText = "Đang quét... Hãy đưa CCCD vào giữa màn hình.";
+            }).catch((err) => {
+                // Báo lỗi rõ ràng nếu bị chặn quyền camera
+                document.getElementById('result-text').innerHTML = "❌ Lỗi: Không thể mở Camera.<br>Hãy đảm bảo bạn đã CẤP QUYỀN CAMERA cho trang web này!";
                 document.getElementById('btn-restart').style.display = "block";
             });
         }
 
-        // Tự động mở camera HD khi load xong trang
-        window.onload = startScanner;
+        window.onload = startCamera;
     </script>
 </body>
 </html>
